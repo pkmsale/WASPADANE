@@ -17,11 +17,11 @@ const UNIT_PELAPOR_LIST = [
   "BPM Emy Widyaastuti", "BPM Endang", "BPM Sulistyaningrum", "BPM Kartini",
   "BPM Rina Wariyanti", "PKD Bancang", "BPM Lailatul Lutfia", "BPM Anita Dwi",
   "BPM Sri Damayanti", "BPM Nurmini", "BPM Siti Patonah", "PKD Joho",
-  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "drg. Lutfia",
-  "Laporan RS/Masyarakat"
+  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "dr. Lutfia",
+  "Laporan RS/Kader/Masyarakat"
 ];
 
-// 24 penyakit potensial KLB/wabah SKDR + gejala kunci (checklist) per penyakit.
+// 25 penyakit potensial KLB/wabah SKDR + gejala kunci (checklist) per penyakit.
 // "kode" mengikuti kode SMS W2 SKDR resmi (A-Z, tanpa I & O).
 const PENYAKIT_LIST = [
   { kode: "A", nama: "Diare Akut", kategori: "Pencernaan", gejala: [
@@ -94,6 +94,9 @@ const PENYAKIT_LIST = [
   { kode: "Y", nama: "ILI (Influenza Like Illness)", kategori: "Saluran napas", gejala: [
     "Demam mendadak >38°C", "Batuk", "Dan/atau nyeri tenggorokan",
     "Tanpa penyebab lain yang jelas", "Nyeri otot/sakit kepala/lemas" ] },
+  { kode: "AA", nama: "ISPA (Infeksi Saluran Pernapasan Akut)", kategori: "Saluran napas", gejala: [
+    "Demam", "Batuk", "Pilek/hidung tersumbat", "Nyeri tenggorokan",
+    "Sesak napas ringan", "Tidak ada tanda pneumonia (napas cepat/tarikan dinding dada)" ] },
   { kode: "Z", nama: "Suspek HFMD", kategori: "Anak", gejala: [
     "Demam 38-39°C selama 3-7 hari", "Nyeri menelan", "Bintik/lepuh (vesikel) di rongga mulut",
     "Dan/atau ruam di telapak tangan, kaki, bokong", "Umumnya usia < 10 tahun" ] },

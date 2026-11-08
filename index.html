@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="WASPADANE Sale">
 <title>WASPADANE — Puskesmas Sale</title>
   <link rel="icon" type="image/png" href="logopkmsale.png">
-<meta name="version" content="v3.0-20260817">
+<meta name="version" content="v3.1-gabungan-20261102">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>/* Chart.js 4.4.4 — embedded */
@@ -127,7 +127,7 @@
   .stat-card .num{font-family:'IBM Plex Mono';font-size:26px;font-weight:600;color:var(--ink);}
   .stat-card .lbl{font-size:11.5px;color:var(--muted);margin-top:2px;}
 
-  .chart-box{height:260px;}
+  .chart-box{height:260px;position:relative;}
   .alert-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;background:#FFF6E9;border:1px solid #F1DBAA;margin-bottom:8px;font-size:13px;}
   .alert-count{font-family:'IBM Plex Mono';font-weight:700;font-size:16px;color:var(--danger);background:#fff;border-radius:6px;padding:2px 9px;border:1px solid var(--danger);}
 
@@ -308,7 +308,48 @@
     .skdr-fg{min-width:140px;}
   }
 
+/* ===== KLASIFIKASI SKDR ===== */
+.klas-dropzone{
+  border:1.5px dashed #B9C6C1;border-radius:10px;
+  padding:40px 24px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s;
+  background:linear-gradient(180deg,#FAFCFA,#F5F8F6);
+}
+.klas-dropzone:hover,.klas-dropzone.dragover{border-color:var(--teal);background:#EDF3F3;}
+.klas-dropzone svg{margin-bottom:12px;opacity:.8;}
+.klas-status{font-size:13px;color:var(--muted);margin-top:12px;min-height:18px;}
+.klas-status.err{color:var(--danger);}
+.klas-file-chip{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:13px;background:#EDF3F3;border:1px solid #C7D6D1;
+  border-radius:100px;padding:7px 16px;margin-top:14px;
+}
+.klas-file-chip button{border:none;background:none;color:var(--danger);cursor:pointer;font-size:13px;text-decoration:underline;padding:0;}
+.klas-signal-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);}
+.klas-signal-row:last-child{border-bottom:none;}
+.klas-pulse{width:9px;height:9px;border-radius:50%;background:#D7DEDA;flex-shrink:0;}
+.klas-pulse.on{background:var(--danger);box-shadow:0 0 0 0 rgba(196,67,43,.5);animation:klaspulse 1.8s infinite;}
+@keyframes klaspulse{0%{box-shadow:0 0 0 0 rgba(196,67,43,.45);}70%{box-shadow:0 0 0 8px rgba(196,67,43,0);}100%{box-shadow:0 0 0 0 rgba(196,67,43,0);}}
+.klas-signal-name{flex:1;font-size:14px;}
+.klas-signal-count{font-size:14px;font-weight:600;min-width:24px;text-align:right;}
+.klas-badge-alert{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:600;background:#fde8e5;color:var(--danger);}
+.klas-badge-none{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:600;background:#EEF1EF;color:var(--muted);}
+
+/* ===== APP FOOTER COPYRIGHT ===== */
+.app-footer{
+  background:var(--dark);color:#2a6b5a;
+  font-size:12px;padding:16px 20px;text-align:center;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.app-footer-inner{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;}
+.app-footer strong{color:#2a6b5a;}
+.app-footer a{color:var(--amber);text-decoration:none;}
+.app-footer a:hover{text-decoration:underline;}
+.app-footer-sep{opacity:.4;}
+
 </style>
+<!-- SheetJS untuk baca .xls/.xlsx di Klasifikasi SKDR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -331,6 +372,7 @@
   <button class="navbtn" data-tab="rekap">Rekap Data</button>
   <button class="navbtn" data-tab="kelola-penyakit">Kelola Penyakit</button>
   <button class="navbtn" data-tab="pengaturan">Pengaturan</button>
+  <button class="navbtn" data-tab="klasifikasi-skdr">🔬 Klasifikasi SKDR</button>
 </nav>
 
 <main>
@@ -570,6 +612,32 @@
       <div class="stat-card"><div class="num" id="statDesaTerdampak">0</div><div class="lbl">Desa Terdampak</div></div>
       <div class="stat-card"><div class="num" id="statMingguAktif">0</div><div class="lbl">Minggu Epidemiologi Aktif</div></div>
     </div>
+    <!-- RINGKASAN MINGGU INI -->
+    <div class="card">
+      <h2>Ringkasan Minggu Ini</h2>
+      <p class="sub" id="labelMingguIni">—</p>
+      <div id="trenMingguBox" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
+    </div>
+    <!-- TREN PENYAKIT TOGGLE -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <h2 style="margin:0">Tren Kasus Penyakit</h2>
+          <p class="sub" style="margin:4px 0 0">Top 10 penyakit — pilih tampilan kumulatif atau per minggu</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="btnTrenKumulatif" onclick="setTrenMode('kumulatif')">📈 Kumulatif</button>
+          <button class="btn secondary" id="btnTrenMingguan" onclick="setTrenMode('mingguan')">📅 Mingguan</button>
+        </div>
+      </div>
+      <div class="chart-box" style="height:320px;margin-top:12px;"><canvas id="chartTrenPenyakit"></canvas></div>
+    </div>
+    <!-- TABEL PERBANDINGAN MINGGUAN -->
+    <div class="card">
+      <h2>Tabel Kasus Per Minggu</h2>
+      <p class="sub">Perbandingan jumlah kasus tiap penyakit antar minggu. <span style="color:#c0392b">▲ naik</span> / <span style="color:#27ae60">▼ turun</span> dibanding minggu sebelumnya.</p>
+      <div style="overflow-x:auto;"><table id="tabelMinggu" style="width:100%;border-collapse:collapse;font-size:13px;"></table></div>
+    </div>
     <div class="card">
       <h2>Pola yang Perlu Perhatian</h2>
       <p class="sub">Penyakit dengan ≥3 kasus di desa &amp; minggu epidemiologi yang sama.</p>
@@ -577,7 +645,7 @@
     </div>
     <div class="grid2">
       <div class="card"><h2>Analisis Tempat</h2><p class="sub">Jumlah kasus per desa/kelurahan</p><div class="chart-box"><canvas id="chartTempat"></canvas></div></div>
-      <div class="card"><h2>Analisis Waktu</h2><p class="sub">Tren kasus per minggu epidemiologi</p><div class="chart-box"><canvas id="chartWaktu"></canvas></div></div>
+      <div class="card"><h2>Analisis Waktu</h2><p class="sub">Tren kasus total per minggu</p><div class="chart-box"><canvas id="chartWaktu"></canvas></div></div>
       <div class="card"><h2>Analisis Orang — Kelompok Umur</h2><div class="chart-box"><canvas id="chartOrangUmur"></canvas></div></div>
       <div class="card"><h2>Analisis Orang — Jenis Kelamin</h2><div class="chart-box"><canvas id="chartOrangGender"></canvas></div></div>
     </div>
@@ -641,7 +709,103 @@
     </div>
   </section>
 
+  <!-- ======================= TAB: KLASIFIKASI SKDR ======================= -->
+  <section id="panel-klasifikasi-skdr" class="tab-panel">
+    <div class="card">
+      <h2>🔬 Klasifikasi Kunjungan menurut Kategori SKDR</h2>
+      <p class="sub">Upload register harian puskesmas (.xls / .xlsx). Setiap kode ICD-10 otomatis dicocokkan ke kategori SKDR resmi.</p>
+
+      <div class="klas-dropzone" id="klasDropzone">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.6"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">Klik untuk pilih file, atau tarik ke sini</div>
+        <div style="font-size:13px;color:var(--muted)">Format .xls atau .xlsx — sesuai struktur Register Harian Puskesmas</div>
+        <input type="file" id="klasFileInput" accept=".xls,.xlsx" style="display:none">
+      </div>
+      <div id="klasFileChip"></div>
+      <div id="klasStatus" class="klas-status"></div>
+    </div>
+
+    <div id="klasResults" style="display:none">
+
+      <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+        <div class="stat-card">
+          <div class="num" id="klasStatTotal">0</div>
+          <div class="lbl">Total Kunjungan</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" style="color:var(--danger)" id="klasStatHits">0</div>
+          <div class="lbl">Teridentifikasi SKDR</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="klasStatCats">0</div>
+          <div class="lbl">Kategori Aktif</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:14px">Sinyal Kategori SKDR</h2>
+        <div id="klasSignalList"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:14px">Rekap per Pustu / Cabang</h2>
+        <div class="table-wrap">
+          <table><thead><tr><th>Pustu / Cabang</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
+          <tbody id="klasPustuBody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:14px">Rekap per Poli</h2>
+        <div class="table-wrap">
+          <table><thead><tr><th>Poli</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
+          <tbody id="klasPoliBody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:14px">Sebaran Kategori SKDR per Desa</h2>
+        <div class="table-wrap">
+          <table id="klasSkdrDesaTable">
+            <thead id="klasSkdrDesaHead"></thead>
+            <tbody id="klasSkdrDesaBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:14px">Data Kunjungan Terklasifikasi</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th><th>Nama Pasien</th><th>No. RM</th>
+                <th>Umur/JK</th><th>Desa</th><th>Pustu</th><th>Poli</th><th>Kode ICD-10</th>
+                <th>Kategori SKDR</th><th>Dokter</th>
+              </tr>
+            </thead>
+            <tbody id="klasTableBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">
+          <button class="btn" id="klasDownloadBtn">📥 Unduh Hasil (.xlsx)</button>
+          <button class="btn secondary" id="klasResetBtn">🔄 Proses File Lain</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
+
+<footer class="app-footer">
+  <div class="app-footer-inner">
+    <span>© 2026 <strong>AbduBasitMudewi</strong> — Epidemiolog Kesehatan</span>
+    <span class="app-footer-sep">·</span>
+    <a href="tel:+6282135887509">082135887509</a>
+    <span class="app-footer-sep">·</span>
+    <span>Puskesmas Sale, Kec. Sale, Kab. Rembang</span>
+  </div>
+</footer>
 
 <div id="toast" class="toast"></div>
 
@@ -666,8 +830,8 @@ const UNIT_PELAPOR_LIST = [
   "BPM Emy Widyaastuti", "BPM Endang", "BPM Sulistyaningrum", "BPM Kartini",
   "BPM Rina Wariyanti", "PKD Bancang", "BPM Lailatul Lutfia", "BPM Anita Dwi",
   "BPM Sri Damayanti", "BPM Nurmini", "BPM Siti Patonah", "PKD Joho",
-  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "DPM dr. Lutfia",
-  "Laporan RS/Masyarakat/Kader"
+  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "dr. Lutfia",
+  "Laporan RS/Masyarakat"
 ];
 
 // 24 penyakit potensial KLB/wabah SKDR + gejala kunci (checklist) per penyakit.
@@ -1807,14 +1971,17 @@ function showTab(tab) {
   document.getElementById("panel-" + tab).classList.add("active");
   document.querySelector(`.navbtn[data-tab="${tab}"]`).classList.add("active");
   if (tab === "dashboard") {
-    // Delay kecil agar panel sudah visible sebelum Chart.js kalkulasi ukuran canvas
-    setTimeout(() => refreshDataAndRender(renderDashboard), 50);
+    // Tunggu browser selesai layout panel (visible) sebelum Chart.js hitung ukuran canvas
+    requestAnimationFrame(() => setTimeout(() => refreshDataAndRender(renderDashboard), 80));
   }
   if (tab === "rekap") refreshDataAndRender(renderRekap);
   if (tab === "kelola-penyakit") renderKelolaPenyakit();
   if (tab === "skdr-mingguan") {
     if (typeof skdrBuildTable === "function") skdrBuildTable();
     if (typeof skdrBuildFasSelect === "function") skdrBuildFasSelect();
+  }
+  if (tab === "klasifikasi-skdr") {
+    // panel siap — tidak perlu inisialisasi khusus
   }
 }
 
@@ -2078,24 +2245,141 @@ function ageInYears(row) {
 /* ---------------------------- DASHBOARD / ANALISIS ---------------------------- */
 let chartTempat, chartWaktu, chartOrang, chartPenyakit;
 
+// ---- TREN DASHBOARD: mode toggle ----
+let _trenMode = 'mingguan';
+function setTrenMode(mode) {
+  _trenMode = mode;
+  document.getElementById('btnTrenKumulatif').className = mode === 'kumulatif' ? 'btn' : 'btn secondary';
+  document.getElementById('btnTrenMingguan').className = mode === 'mingguan' ? 'btn' : 'btn secondary';
+  renderDashboard();
+}
+
+const TREN_COLORS = [
+  "#1B8A8A","#C4432B","#D98E04","#2E86AB","#7B2D8B",
+  "#27AE60","#E67E22","#8E44AD","#16A085","#C0392B"
+];
+
+function buildMingguPenyakitMatrix(kasus) {
+  const matrix = {};
+  const mingguSet = new Set();
+  const penyakitTot = {};
+  (kasus || []).forEach(k => {
+    const wk = isoWeekKey(k.tanggal_lapor || k.tanggal || "");
+    // Gunakan nama_penyakit, fallback ke kode_penyakit, fallback ke "Lainnya"
+    const pn = (k.nama_penyakit || k.penyakit || k.kode_penyakit || "Lainnya").trim();
+    if (wk === "?") return; // skip data tanpa tanggal valid
+    mingguSet.add(wk);
+    if (!matrix[pn]) matrix[pn] = {};
+    matrix[pn][wk] = (matrix[pn][wk] || 0) + 1;
+    penyakitTot[pn] = (penyakitTot[pn] || 0) + 1;
+  });
+  const mingguList = Array.from(mingguSet).sort();
+  const penyakitList = Object.keys(penyakitTot)
+    .sort((a, b) => penyakitTot[b] - penyakitTot[a]).slice(0, 10);
+  return { mingguList, penyakitList, matrix };
+}
+
+function renderTrenMingguIni(kasus) {
+  const allMinggu = Array.from(new Set((kasus||[]).map(k => isoWeekKey(k.tanggal_lapor || k.tanggal || "")))).filter(w => w !== "?").sort();
+  const mingguIni  = allMinggu[allMinggu.length - 1] || "";
+  const mingguLalu = allMinggu[allMinggu.length - 2] || "";
+  const lbl = document.getElementById("labelMingguIni");
+  if (lbl) lbl.textContent = mingguIni ? "Minggu epidemiologi: " + mingguIni : "Belum ada data";
+  const perIni = {}, perLalu = {};
+  (kasus||[]).forEach(k => {
+    const wk = isoWeekKey(k.tanggal_lapor || k.tanggal || "");
+    const pn = (k.nama_penyakit || k.penyakit || k.kode_penyakit || "Lainnya").trim();
+    if (wk === mingguIni)  perIni[pn]  = (perIni[pn]  || 0) + 1;
+    if (wk === mingguLalu) perLalu[pn] = (perLalu[pn] || 0) + 1;
+  });
+  const allP = Array.from(new Set([...Object.keys(perIni), ...Object.keys(perLalu)]))
+    .sort((a, b) => (perIni[b] || 0) - (perIni[a] || 0)).slice(0, 8);
+  const box = document.getElementById("trenMingguBox");
+  if (!box) return;
+  if (!allP.length) { box.innerHTML = "<p style='color:var(--muted);font-size:13px'>Belum ada data minggu ini.</p>"; return; }
+  box.innerHTML = allP.map(pn => {
+    const ini = perIni[pn] || 0, lalu = perLalu[pn] || 0;
+    let tren = "-> tetap", col = "#888";
+    if (!lalu && ini)       { tren = "🆕 baru"; col = "#2980B9"; }
+    else if (ini > lalu)    { tren = "▲ +" + (ini - lalu); col = "#c0392b"; }
+    else if (ini < lalu)    { tren = "▼ -" + (lalu - ini); col = "#27ae60"; }
+    return '<div style="background:var(--bg,#f5f7f7);border-radius:8px;padding:8px 14px;min-width:130px;border:1px solid var(--border,#ddd);">'
+      + '<div style="font-size:12px;color:var(--muted,#666);margin-bottom:2px;">' + pn + '</div>'
+      + '<div style="font-size:20px;font-weight:700;">' + ini + '</div>'
+      + '<div style="font-size:12px;color:' + col + ';font-weight:600;">' + tren + '</div>'
+      + (mingguLalu ? '<div style="font-size:11px;color:var(--muted)">Minggu lalu: ' + lalu + '</div>' : '')
+      + '</div>';
+  }).join("");
+}
+
+function renderTabelMinggu(kasus) {
+  const { mingguList, penyakitList, matrix } = buildMingguPenyakitMatrix(kasus);
+  const tabel = document.getElementById("tabelMinggu");
+  if (!tabel || !mingguList.length) { if (tabel) tabel.innerHTML = ""; return; }
+  const cols = mingguList.slice(-8);
+  let html = '<thead><tr style="background:var(--primary,#0E4749);color:#fff;">'
+    + '<th style="padding:6px 10px;text-align:left;font-size:12px;white-space:nowrap;">Penyakit</th>';
+  cols.forEach(w => { html += '<th style="padding:6px 8px;text-align:center;font-size:11px;white-space:nowrap;">' + w + '</th>'; });
+  html += '<th style="padding:6px 8px;text-align:center;font-size:11px;">Total</th></tr></thead><tbody>';
+  penyakitList.forEach((pn, ri) => {
+    const row = cols.map(w => (matrix[pn] || {})[w] || 0);
+    const tot = row.reduce((a, b) => a + b, 0);
+    html += '<tr style="background:' + (ri % 2 === 0 ? 'var(--row-even,#f9f9f9)' : 'var(--bg-card,#fff)') + '">'
+      + '<td style="padding:5px 10px;font-size:12px;white-space:nowrap;font-weight:500;">' + pn + '</td>';
+    row.forEach((v, ci) => {
+      const prev = ci > 0 ? row[ci - 1] : null;
+      const badge = prev !== null && v > prev && v > 0 ? '<span style="color:#c0392b;font-size:10px;"> ▲</span>'
+        : prev !== null && v < prev && prev > 0 ? '<span style="color:#27ae60;font-size:10px;"> ▼</span>' : '';
+      html += '<td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:' + (v > 0 ? '600' : '400')
+        + ';color:' + (v > 0 ? 'var(--primary,#0E4749)' : 'var(--muted,#aaa)') + ';">' + (v > 0 ? v : '—') + badge + '</td>';
+    });
+    html += '<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--primary,#0E4749);">' + tot + '</td></tr>';
+  });
+  tabel.innerHTML = html + '</tbody>';
+}
+
+function renderTrenPenyakitChart(kasus) {
+  const { mingguList, penyakitList, matrix } = buildMingguPenyakitMatrix(kasus);
+  if (!mingguList.length) { drawChart("chartTrenPenyakit", "line", [], [], "chartTrenPenyakit"); return; }
+  const datasets = penyakitList.map((pn, i) => {
+    let data;
+    if (_trenMode === 'kumulatif') {
+      let cum = 0;
+      data = mingguList.map(w => { cum += (matrix[pn] || {})[w] || 0; return cum; });
+    } else {
+      data = mingguList.map(w => (matrix[pn] || {})[w] || 0);
+    }
+    return { label: pn, data, borderColor: TREN_COLORS[i % TREN_COLORS.length],
+      backgroundColor: "transparent", tension: 0.25, pointRadius: 3, borderWidth: 2 };
+  });
+  drawChart("chartTrenPenyakit", "line", mingguList, datasets, "chartTrenPenyakit");
+}
+
 function renderDashboard() {
   const kasus = state.kasus;
   document.getElementById("statTotalKasus").textContent = kasus.length;
   document.getElementById("statTotalBencana").textContent = state.bencana.length;
   const desaSet = new Set(kasus.map(k => k.desa));
   document.getElementById("statDesaTerdampak").textContent = desaSet.size;
-  const minggu = new Set(kasus.map(k => isoWeekKey(k.tanggal_lapor)));
+  const minggu = new Set(kasus.map(k => isoWeekKey(k.tanggal_lapor)).filter(w => w !== "?"));
   document.getElementById("statMingguAktif").textContent = minggu.size;
 
-  // Jika tidak ada data sama sekali, tampilkan pesan
   if (!kasus || kasus.length === 0) {
-    ["chartTempat","chartWaktu","chartOrangUmur","chartOrangGender","chartPenyakit"].forEach(id => {
+    ["chartTempat","chartWaktu","chartOrangUmur","chartOrangGender","chartPenyakit","chartTrenPenyakit"].forEach(id => {
       drawChart(id, "bar", [], [], id);
     });
     document.getElementById("alertList").innerHTML =
       "<p style='color:var(--muted);font-size:13px;padding:8px 0'>Belum ada laporan kasus. Grafik akan muncul setelah ada data.</p>";
+    const box = document.getElementById("trenMingguBox");
+    if (box) box.innerHTML = "<p style='color:var(--muted);font-size:13px'>Belum ada data.</p>";
+    const tabel = document.getElementById("tabelMinggu");
+    if (tabel) tabel.innerHTML = "";
     return;
   }
+
+  renderTrenMingguIni(kasus);
+  renderTrenPenyakitChart(kasus);
+  renderTabelMinggu(kasus);
 
   // ---- ANALISIS TEMPAT (per desa) ----
   const perDesa = {};
@@ -2109,7 +2393,7 @@ function renderDashboard() {
   const mingguLabels = Object.keys(perMinggu).sort();
   drawChart("chartWaktu", "line", mingguLabels, [{ label: "Jumlah kasus/minggu", data: mingguLabels.map(w => perMinggu[w]), borderColor: "#0E4749", backgroundColor: "rgba(14,71,73,0.12)", fill: true, tension: 0.25 }], "chartWaktu");
 
-  // ---- ANALISIS ORANG (kelompok umur & jenis kelamin) ----
+  // ---- ANALISIS ORANG ----
   const grupUmur = { "0-4": 0, "5-14": 0, "15-44": 0, "45-64": 0, "65+": 0, "?": 0 };
   const grupGender = { "Laki-laki": 0, "Perempuan": 0 };
   kasus.forEach(k => {
@@ -2125,13 +2409,12 @@ function renderDashboard() {
   drawChart("chartOrangUmur", "bar", Object.keys(grupUmur), [{ label: "Kelompok umur", data: Object.values(grupUmur), backgroundColor: "#D98E04" }], "chartOrangUmur");
   drawChart("chartOrangGender", "doughnut", Object.keys(grupGender), [{ data: Object.values(grupGender), backgroundColor: ["#1B8A8A", "#C4432B"] }], "chartOrangGender");
 
-  // ---- TOP PENYAKIT + ALERT SEDERHANA ----
+  // ---- TOP PENYAKIT ----
   const perPenyakit = {};
   kasus.forEach(k => perPenyakit[k.nama_penyakit] = (perPenyakit[k.nama_penyakit] || 0) + 1);
   const penyakitLabels = Object.keys(perPenyakit).sort((a, b) => perPenyakit[b] - perPenyakit[a]).slice(0, 10);
   drawChart("chartPenyakit", "bar", penyakitLabels, [{ label: "Jumlah kasus", data: penyakitLabels.map(p => perPenyakit[p]), backgroundColor: "#3E8E7E" }], "chartPenyakit", true);
 
-  // Alert sederhana: penyakit dgn >=5 kasus pada desa+minggu yang sama minggu ini dianggap perlu perhatian
   renderAlertList(kasus);
 }
 
@@ -2150,7 +2433,9 @@ function renderAlertList(kasus) {
 
 function isoWeekKey(dateStr) {
   if (!dateStr) return "?";
-  const d = new Date(dateStr + "T00:00:00");
+  // Ambil bagian tanggal saja (YYYY-MM-DD), apapun formatnya
+  const datePart = String(dateStr).slice(0, 10);
+  const d = new Date(datePart + "T00:00:00");
   if (isNaN(d)) return "?";
   const target = new Date(d.valueOf());
   const dayNr = (d.getDay() + 6) % 7;
@@ -2168,15 +2453,28 @@ function drawChart(canvasId, type, labels, datasets, key) {
     if (!canvas) return; // canvas tidak ditemukan
     const ctx = canvas.getContext("2d");
     if (!ctx) return;    // context tidak tersedia
-    // Jika data kosong, tampilkan pesan "belum ada data"
+    // Jika data kosong, tampilkan placeholder via elemen sibling (lebih andal saat canvas 0px)
     if (!labels || labels.length === 0) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#aaa";
-      ctx.font = "13px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Belum ada data", canvas.width / 2, canvas.height / 2);
+      if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); chartInstances[canvasId] = null; }
+      const parent = canvas.parentElement;
+      let ph = parent.querySelector('.chart-empty-msg');
+      if (!ph) {
+        ph = document.createElement('div');
+        ph.className = 'chart-empty-msg';
+        ph.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted,#aaa);font-size:13px;pointer-events:none;';
+        if (parent.style.position !== 'relative' && parent.style.position !== 'absolute') parent.style.position = 'relative';
+        parent.appendChild(ph);
+      }
+      ph.textContent = 'Belum ada data';
+      ph.style.display = 'flex';
+      canvas.style.opacity = '0';
       return;
     }
+    // Ada data: hapus placeholder jika ada
+    const parent2 = canvas.parentElement;
+    const ph2 = parent2 ? parent2.querySelector('.chart-empty-msg') : null;
+    if (ph2) ph2.style.display = 'none';
+    canvas.style.opacity = '1';
     if (chartInstances[canvasId]) {
       chartInstances[canvasId].destroy();
       chartInstances[canvasId] = null;
@@ -2188,7 +2486,7 @@ function drawChart(canvasId, type, labels, datasets, key) {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: (canvasId === "chartPenyakit") ? "y" : "x",
-        plugins: { legend: { display: type === "doughnut" } },
+        plugins: { legend: { display: type === "doughnut" || canvasId === "chartTrenPenyakit" } },
         scales: type === "doughnut" ? {} : { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
@@ -2231,8 +2529,322 @@ window.addEventListener("DOMContentLoaded", () => {
   renderRekap();
   // Inisialisasi modul SKDR Mingguan
   if (typeof skdrInit === "function") skdrInit();
+  // Inisialisasi modul Klasifikasi SKDR
+  if (typeof klasInit === "function") klasInit();
 });
 
+</script>
+
+<!-- ===================== MODUL KLASIFIKASI SKDR ===================== -->
+<script>
+/* ===== Klasifikasi SKDR — terintegrasi ke WASPADANE ===== */
+
+// ---- 1. KATEGORI SKDR RESMI ----
+const KLAS_CATEGORIES = [
+  ["A","Diare Akut","",["A02","A04","A08","A09"],null],
+  ["B","Malaria Konfirmasi","",["B50","B51","B52","B53","B54"],null],
+  ["C","Suspek Dengue","",["A90","A91"],null],
+  ["D","Pneumonia","",["J12","J13","J14","J15","J16","J17","J18"],null],
+  ["E","Diare Berdarah","",["A03","A06"],null],
+  ["F","Suspek Demam Tifoid","",["A01"],null],
+  ["G","Sindrom Jaundis Akut","",["R17","A95","B15","B17"],null],
+  ["H","Suspek Chikungunya","",["A92"],null],
+  ["J","Suspek Flu Burung pada Manusia","",["J09"],null],
+  ["K","Suspek Campak","",["B05","B06"],null],
+  ["L","Kasus Observasi Difteri","",["A36"],null],
+  ["M","Suspek Pertussis","",["A37"],null],
+  ["N","AFP (Lumpuh Layuh Mendadak)","Hanya usia < 15 tahun",["A80","G54","G56","G57","G61","G62","G63","G70","G71","G72","G73","G81","G82","G83"],15],
+  ["P","Kasus GHPR","",["A82","W54","W55","Z20"],null],
+  ["Q","Suspek Antraks","",["A22"],null],
+  ["R","Suspek Leptospirosis","",["A27"],null],
+  ["S","Suspek Kolera","",["A00"],null],
+  ["U","Suspek Meningitis/Ensefalitis","",["A83","A84","A85","A86","A87","A88","A89","G00","G01","G02","G03","G04","G05","G06","G07"],null],
+  ["V","Suspek Tetanus Neonatorum","",["A33"],null],
+  ["W","Suspek Tetanus","",["A35"],null],
+  ["Y","ILI (Influenza Like Illness)","",["J09","J10","J11"],null],
+  ["Z","Suspek HFMD","",["B08"],null],
+  ["AA","ISPA","",["J00","J01","J02","J03","J04","J05","J06","J20","J21","J22"],null],
+  ["AC","COVID-19 Konfirmasi","",["U07"],null],
+];
+
+function klasBuildCategoryLookup(){
+  const lookup = {};
+  for(const [, name, , codes, usiaMaks] of KLAS_CATEGORIES){
+    for(let code of codes){
+      code = code.trim().toUpperCase();
+      if(!lookup[code]) lookup[code] = [];
+      if(!lookup[code].some(([n]) => n === name)) lookup[code].push([name, usiaMaks]);
+    }
+  }
+  return lookup;
+}
+const KLAS_LOOKUP = klasBuildCategoryLookup();
+
+function klasClassify(kodeRaw, umur){
+  if(!kodeRaw) return "Belum Termasuk Kategori SKDR";
+  const kode = kodeRaw.trim().toUpperCase();
+  // coba exact match dulu, lalu 3-char prefix
+  let candidates = KLAS_LOOKUP[kode];
+  if(!candidates) candidates = KLAS_LOOKUP[kode.slice(0,3)];
+  if(!candidates || !candidates.length) return "Belum Termasuk Kategori SKDR";
+  const valid = candidates
+    .filter(([, mx]) => mx === null || umur === null || umur === undefined || umur <= mx)
+    .map(([n]) => n);
+  return valid.length ? valid.join("; ") : "Belum Termasuk Kategori SKDR";
+}
+
+// ---- 2. KELOMPOK UMUR ----
+const KLAS_AGE_BINS = [
+  [0,0,"< 1 Tahun"],[1,4,"1-4 Tahun"],[5,9,"5-9 Tahun"],[10,14,"10-14 Tahun"],
+  [15,19,"15-19 Tahun"],[20,44,"20-44 Tahun"],[45,54,"45-54 Tahun"],[55,59,"55-59 Tahun"],
+  [60,69,"60-69 Tahun"],[70,999,"≥ 70 Tahun"],
+];
+function klasAgeGroup(umur){
+  if(umur === null || umur === undefined || isNaN(umur)) return "Tidak Diketahui";
+  for(const [lo,hi,lbl] of KLAS_AGE_BINS) if(umur>=lo && umur<=hi) return lbl;
+  return "Tidak Diketahui";
+}
+
+// ---- 3. PARSING REGISTER HARIAN ----
+const KLAS_CARA_BAYAR_SET = new Set(["JKN","BAYAR","UMUM","BPJS","GRATIS"]);
+
+function klasParseSheetRows(aoa, state){
+  const rows = [];
+  for(const r of aoa){
+    const cells = [];
+    for(let i=0;i<r.length;i++){
+      if(r[i]===undefined||r[i]===null) continue;
+      const s = String(r[i]).trim();
+      if(s!=="") cells.push(s);
+    }
+    if(!cells.length) continue;
+    const rowText = cells.join(" ");
+
+    // kontrol baris: Tanggal / Cabang
+    let ctrl = false;
+    for(const val of cells){
+      let m = val.match(/^Tanggal\s*:\s*(.+?)\s*#\s*Cabang\s*:\s*(.+)$/);
+      if(m){ state.tanggal=m[1].trim(); state.cabang=m[2].trim(); ctrl=true; break; }
+      m = val.match(/^Cabang\s*:\s*(.+)$/);
+      if(m){ state.cabang=m[1].trim(); ctrl=true; break; }
+      m = val.match(/^Tanggal\s*:\s*(.+)$/);
+      if(m){ state.tanggal=m[1].trim(); ctrl=true; break; }
+    }
+    if(ctrl) continue;
+    if(/Jumlah Kunjungan|REGISTER KUNJUNGAN|PUSKESMAS/.test(rowText)) continue;
+
+    // ekstrak field dari sel
+    const f={ident:"",alamat:"",umurJk:"",poli:"",caraBayar:"",kodeIcd:"",terapi:"",dokter:""};
+    for(const val of cells){
+      if(!f.kodeIcd && /^#\s*[A-Z]\d{2}/.test(val)){
+        f.kodeIcd = val.replace(/^#/,"").trim().toUpperCase();
+      } else if(val.startsWith("#")){
+        f.terapi = val.replace(/^#/,"").trim();
+      } else if(/^\d{1,3}-\d{1,2}\s*\/\s*[LP]$/.test(val)){
+        f.umurJk = val;
+      } else if(/\bRT\b/.test(val)&&val.includes("/")){
+        f.alamat = val;
+      } else if(KLAS_CARA_BAYAR_SET.has(val.toUpperCase())){
+        f.caraBayar = val;
+      } else if(/^(?!\d).+\s*\/\s*[LB]$/.test(val)){
+        f.poli = val;
+      } else if((val.match(/\//g)||[]).length>=2){
+        f.ident = val;
+      } else {
+        f.dokter = val;
+      }
+    }
+    if(!f.kodeIcd) continue;
+
+    const parts = f.ident.split("/").map(p=>p.trim());
+    const nama=parts[0]||"", noRm=parts[1]||"";
+    const am = f.alamat.match(/^(.*?)\s*RT\b/);
+    let desa = (am ? am[1].trim() : f.alamat).toUpperCase();
+    if(!desa||["NULL","NONE","DATA KOSONG"].includes(desa)) desa="Tidak Diketahui";
+    const um = f.umurJk.match(/^(\d{1,3})-(\d{1,2})\s*\/\s*([LP])$/);
+    const umur = um ? parseInt(um[1],10) : null;
+    const jk = um ? ({L:"Laki-laki",P:"Perempuan"}[um[3]]||"") : "";
+    const pm = f.poli.match(/^(.+?)\s*\/\s*([LB])$/);
+    const poli = pm ? pm[1].trim() : f.poli;
+
+    state.no++;
+    rows.push({
+      no:state.no, nama, noRm, tanggal:state.tanggal, pustu:state.cabang,
+      desa, umur, kelompokUmur:klasAgeGroup(umur), jk,
+      poli, caraBayar:f.caraBayar, kodeIcd:f.kodeIcd, terapi:f.terapi,
+      dokter:f.dokter, kategori:klasClassify(f.kodeIcd, umur)
+    });
+  }
+  return rows;
+}
+
+function klasParseWorkbook(wb){
+  const state={tanggal:"",cabang:"",no:0};
+  let all=[];
+  for(const name of wb.SheetNames){
+    const sheet=wb.Sheets[name];
+    const aoa=XLSX.utils.sheet_to_json(sheet,{header:1,defval:undefined});
+    all=all.concat(klasParseSheetRows(aoa,state));
+  }
+  return all;
+}
+
+// ---- 4. STATE ----
+let klasData = [];
+let klasFileName = "register";
+
+// ---- 5. HELPER ESCAPE HTML ----
+function klasEsc(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- 6. RENDER HASIL ----
+function klasRenderResults(rows){
+  document.getElementById('klasResults').style.display='';
+  const hits = rows.filter(r=>r.kategori!=="Belum Termasuk Kategori SKDR");
+  document.getElementById('klasStatTotal').textContent = rows.length;
+  document.getElementById('klasStatHits').textContent = hits.length;
+
+  // signal list — unik per nama kategori
+  const seen=new Set(), catNames=[];
+  for(const [,name] of KLAS_CATEGORIES){ if(!seen.has(name)){seen.add(name);catNames.push(name);} }
+  const counts = catNames
+    .map(name=>({name, count:rows.filter(r=>r.kategori.includes(name)).length}))
+    .sort((a,b)=>b.count-a.count);
+  document.getElementById('klasStatCats').textContent = counts.filter(c=>c.count>0).length;
+  document.getElementById('klasSignalList').innerHTML = counts.map(c=>`
+    <div class="klas-signal-row">
+      <span class="klas-pulse ${c.count>0?'on':''}"></span>
+      <span class="klas-signal-name">${klasEsc(c.name)}</span>
+      <span class="klas-signal-count">${c.count}</span>
+    </div>`).join("");
+
+  // rekap pustu
+  const pustuList=[...new Set(rows.map(r=>r.pustu))].sort();
+  document.getElementById('klasPustuBody').innerHTML =
+    pustuList.map(p=>`<tr><td>${klasEsc(p)}</td><td style="text-align:center">${rows.filter(r=>r.pustu===p).length}</td></tr>`).join("") +
+    `<tr><td><strong>TOTAL</strong></td><td style="text-align:center"><strong>${rows.length}</strong></td></tr>`;
+
+  // rekap poli
+  const poliList=[...new Set(rows.map(r=>r.poli))].sort();
+  document.getElementById('klasPoliBody').innerHTML =
+    poliList.map(p=>`<tr><td>${klasEsc(p)}</td><td style="text-align:center">${rows.filter(r=>r.poli===p).length}</td></tr>`).join("") +
+    `<tr><td><strong>TOTAL</strong></td><td style="text-align:center"><strong>${rows.length}</strong></td></tr>`;
+
+  // sebaran SKDR per desa
+  const desaList=[...new Set(rows.map(r=>r.desa))].sort();
+  const activeCats = counts.filter(c=>c.count>0).map(c=>c.name);
+  const skdrDesaHead = document.getElementById('klasSkdrDesaHead');
+  const skdrDesaBody = document.getElementById('klasSkdrDesaBody');
+  if(!activeCats.length){
+    skdrDesaHead.innerHTML=`<tr><th>Kategori SKDR</th></tr>`;
+    skdrDesaBody.innerHTML=`<tr><td>Tidak ada kasus SKDR terdeteksi.</td></tr>`;
+  } else {
+    skdrDesaHead.innerHTML=`<tr><th>Kategori SKDR</th>${desaList.map(d=>`<th>${klasEsc(d)}</th>`).join("")}<th>Total</th></tr>`;
+    skdrDesaBody.innerHTML = activeCats.map(cat=>{
+      const cells = desaList.map(d=>rows.filter(r=>r.kategori.includes(cat)&&r.desa===d).length);
+      const tot = cells.reduce((a,b)=>a+b,0);
+      return `<tr><td>${klasEsc(cat)}</td>${cells.map(c=>`<td style="text-align:center">${c||''}</td>`).join("")}<td style="text-align:center;font-weight:600">${tot}</td></tr>`;
+    }).join("");
+  }
+
+  // tabel detail
+  document.getElementById('klasTableBody').innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.no}</td>
+      <td>${klasEsc(r.nama)}</td>
+      <td>${klasEsc(r.noRm)}</td>
+      <td>${r.umur??'-'} / ${klasEsc(r.jk)}</td>
+      <td>${klasEsc(r.desa)}</td>
+      <td>${klasEsc(r.pustu)}</td>
+      <td>${klasEsc(r.poli)}</td>
+      <td>${klasEsc(r.kodeIcd)}</td>
+      <td>${r.kategori==="Belum Termasuk Kategori SKDR"
+        ? `<span class="klas-badge-none">—</span>`
+        : `<span class="klas-badge-alert">${klasEsc(r.kategori)}</span>`}</td>
+      <td>${klasEsc(r.dokter)}</td>
+    </tr>`).join("");
+}
+
+// ---- 7. HANDLE FILE ----
+function klasHandleFile(file){
+  if(!window.XLSX){ toast('Library XLSX belum siap, coba muat ulang halaman.', true); return; }
+  klasFileName = file.name.replace(/\.(xls|xlsx)$/i,"");
+  document.getElementById('klasFileChip').innerHTML =
+    `<div class="klas-file-chip">📄 ${klasEsc(file.name)} <button id="klasClearBtn" style="margin-left:8px;cursor:pointer;border:none;background:none;color:var(--teal);font-size:12px;">× ganti file</button></div>`;
+  document.getElementById('klasClearBtn').addEventListener('click',e=>{
+    e.stopPropagation();
+    document.getElementById('klasFileChip').innerHTML='';
+    document.getElementById('klasResults').style.display='none';
+    document.getElementById('klasFileInput').value='';
+    klasData=[];
+  });
+  const statusEl = document.getElementById('klasStatus');
+  statusEl.classList.remove('err');
+  statusEl.textContent='Membaca file...';
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data,{type:'array'});
+      klasData = klasParseWorkbook(wb);
+      if(!klasData.length){
+        statusEl.classList.add('err');
+        statusEl.textContent='Tidak ada baris data yang cocok. Pastikan file adalah Register Harian Puskesmas.';
+        document.getElementById('klasResults').style.display='none';
+        return;
+      }
+      statusEl.textContent=`✓ ${klasData.length} kunjungan berhasil dibaca.`;
+      klasRenderResults(klasData);
+    }catch(err){
+      statusEl.classList.add('err');
+      statusEl.textContent='Gagal membaca file: '+err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ---- 8. DOWNLOAD XLSX ----
+function klasDownload(){
+  if(!klasData.length||!window.XLSX) return;
+  const wb = XLSX.utils.book_new();
+  const hdr = ["No","Nama Pasien","No. RM","Tanggal","Pustu/Cabang","Desa","Umur","Kelompok Umur","Jenis Kelamin","Poli","Cara Bayar","Kode ICD-10","Kategori SKDR","Dokter"];
+  const aoa = [hdr,...klasData.map(r=>[r.no,r.nama,r.noRm,r.tanggal,r.pustu,r.desa,r.umur,r.kelompokUmur,r.jk,r.poli,r.caraBayar,r.kodeIcd,r.kategori,r.dokter])];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:5},{wch:26},{wch:14},{wch:13},{wch:14},{wch:16},{wch:7},{wch:12},{wch:12},{wch:14},{wch:10},{wch:12},{wch:34},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,"Data Register");
+  // Rekap Kategori
+  const seen=new Set(), catNames=[];
+  for(const [,name] of KLAS_CATEGORIES){if(!seen.has(name)){seen.add(name);catNames.push(name);}}
+  const ws2 = XLSX.utils.aoa_to_sheet([["Kategori SKDR","Jumlah Kasus"],...catNames.map(n=>[n,klasData.filter(r=>r.kategori.includes(n)).length])]);
+  ws2['!cols']=[{wch:40},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,"Rekap Kategori");
+  XLSX.writeFile(wb,`${klasFileName}_Klasifikasi_SKDR.xlsx`);
+}
+
+// ---- 9. INIT ----
+function klasInit(){
+  const dz = document.getElementById('klasDropzone');
+  const fi = document.getElementById('klasFileInput');
+  if(!dz||!fi) return;
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{
+    e.preventDefault(); dz.classList.remove('dragover');
+    if(e.dataTransfer.files.length) klasHandleFile(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener('change',e=>{if(e.target.files.length) klasHandleFile(e.target.files[0]);});
+  document.getElementById('klasDownloadBtn').addEventListener('click',klasDownload);
+  document.getElementById('klasResetBtn').addEventListener('click',()=>{
+    document.getElementById('klasResults').style.display='none';
+    document.getElementById('klasFileChip').innerHTML='';
+    document.getElementById('klasStatus').textContent='';
+    document.getElementById('klasStatus').classList.remove('err');
+    fi.value='';
+    klasData=[];
+  });
+}
 </script>
 </body>
 </html>

@@ -367,12 +367,11 @@
 <nav class="tabs">
   <button class="navbtn active" data-tab="input-kasus">Lapor Kasus Penyakit</button>
   <button class="navbtn" data-tab="input-bencana">Lapor Bencana</button>
+  <button class="navbtn" data-tab="rekap">Rekap Data</button>
   <button class="navbtn" data-tab="skdr-mingguan">📋 SKDR Mingguan</button>
   <button class="navbtn" data-tab="dashboard">Dashboard Analisis</button>
-  <button class="navbtn" data-tab="rekap">Rekap Data</button>
   <button class="navbtn" data-tab="kelola-penyakit">Kelola Penyakit</button>
   <button class="navbtn" data-tab="pengaturan">Pengaturan</button>
-  <button class="navbtn" data-tab="klasifikasi-skdr">🔬 Klasifikasi SKDR</button>
 </nav>
 
 <main>
@@ -470,6 +469,7 @@
   <section id="panel-skdr-mingguan" class="tab-panel">
     <div class="skdr-subtabs">
       <button class="skdr-subtab-btn active" data-skdr="input" onclick="skdrShowSubTab('input')">Input Laporan</button>
+      <button class="skdr-subtab-btn" data-skdr="klasifikasi" onclick="skdrShowSubTab('klasifikasi')">🔬 Klasifikasi SKDR</button>
       <button class="skdr-subtab-btn" data-skdr="rekap" onclick="skdrShowSubTab('rekap')">Rekapitulasi</button>
       <button class="skdr-subtab-btn" data-skdr="status" onclick="skdrShowSubTab('status')">Status Pelaporan</button>
       <button class="skdr-subtab-btn" data-skdr="kirim" onclick="skdrShowSubTab('kirim')">Kirim ke Dinkes</button>
@@ -535,6 +535,91 @@
           <button class="btn" onclick="skdrSimpan()">Simpan Laporan</button>
           <button class="skdr-btn-nihil" onclick="skdrSimpanNihil()">Laporan NIHIL</button>
           <button class="btn secondary" onclick="skdrReset()">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div id="skdr-panel-klasifikasi" class="skdr-subtab-panel">
+      <div class="card">
+        <h2>🔬 Klasifikasi Kunjungan menurut Kategori SKDR</h2>
+        <p class="sub">Upload register harian puskesmas (.xls / .xlsx). Setiap kode ICD-10 otomatis dicocokkan ke kategori SKDR resmi.</p>
+
+        <div class="klas-dropzone" id="klasDropzone">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.6"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <div style="font-size:16px;font-weight:600;margin-bottom:4px">Klik untuk pilih file, atau tarik ke sini</div>
+          <div style="font-size:13px;color:var(--muted)">Format .xls atau .xlsx — sesuai struktur Register Harian Puskesmas</div>
+          <input type="file" id="klasFileInput" accept=".xls,.xlsx" style="display:none">
+        </div>
+        <div id="klasFileChip"></div>
+        <div id="klasStatus" class="klas-status"></div>
+      </div>
+
+      <div id="klasResults" style="display:none">
+        <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+          <div class="stat-card">
+            <div class="num" id="klasStatTotal">0</div>
+            <div class="lbl">Total Kunjungan</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--danger)" id="klasStatHits">0</div>
+            <div class="lbl">Teridentifikasi SKDR</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" id="klasStatCats">0</div>
+            <div class="lbl">Kategori Aktif</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:16px;margin-bottom:14px">Sinyal Kategori SKDR</h2>
+          <div id="klasSignalList"></div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:16px;margin-bottom:14px">Rekap per Pustu / Cabang</h2>
+          <div class="table-wrap">
+            <table><thead><tr><th>Pustu / Cabang</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
+            <tbody id="klasPustuBody"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:16px;margin-bottom:14px">Rekap per Poli</h2>
+          <div class="table-wrap">
+            <table><thead><tr><th>Poli</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
+            <tbody id="klasPoliBody"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:16px;margin-bottom:14px">Sebaran Kategori SKDR per Desa</h2>
+          <div class="table-wrap">
+            <table id="klasSkdrDesaTable">
+              <thead id="klasSkdrDesaHead"></thead>
+              <tbody id="klasSkdrDesaBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:16px;margin-bottom:14px">Data Kunjungan Terklasifikasi</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th><th>Nama Pasien</th><th>No. RM</th>
+                  <th>Umur/JK</th><th>Desa</th><th>Pustu</th><th>Poli</th><th>Kode ICD-10</th>
+                  <th>Kategori SKDR</th><th>Dokter</th>
+                </tr>
+              </thead>
+              <tbody id="klasTableBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;align-items:center;">
+            <button class="btn" id="klasDownloadBtn">📥 Unduh Hasil (.xlsx)</button>
+            <button class="btn" id="klasKirimLaporanBtn" style="background:var(--teal);color:#fff;">📋 Kirim ke Input Laporan</button>
+            <button class="btn secondary" id="klasResetBtn">🔄 Proses File Lain</button>
+          </div>
+          <div id="klasKirimInfo" style="display:none;margin-top:12px;padding:12px 14px;background:#e8f5f0;border-radius:8px;font-size:13px;color:#2a6b5a;"></div>
         </div>
       </div>
     </div>
@@ -709,91 +794,6 @@
     </div>
   </section>
 
-  <!-- ======================= TAB: KLASIFIKASI SKDR ======================= -->
-  <section id="panel-klasifikasi-skdr" class="tab-panel">
-    <div class="card">
-      <h2>🔬 Klasifikasi Kunjungan menurut Kategori SKDR</h2>
-      <p class="sub">Upload register harian puskesmas (.xls / .xlsx). Setiap kode ICD-10 otomatis dicocokkan ke kategori SKDR resmi.</p>
-
-      <div class="klas-dropzone" id="klasDropzone">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.6"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-        <div style="font-size:16px;font-weight:600;margin-bottom:4px">Klik untuk pilih file, atau tarik ke sini</div>
-        <div style="font-size:13px;color:var(--muted)">Format .xls atau .xlsx — sesuai struktur Register Harian Puskesmas</div>
-        <input type="file" id="klasFileInput" accept=".xls,.xlsx" style="display:none">
-      </div>
-      <div id="klasFileChip"></div>
-      <div id="klasStatus" class="klas-status"></div>
-    </div>
-
-    <div id="klasResults" style="display:none">
-
-      <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-        <div class="stat-card">
-          <div class="num" id="klasStatTotal">0</div>
-          <div class="lbl">Total Kunjungan</div>
-        </div>
-        <div class="stat-card">
-          <div class="num" style="color:var(--danger)" id="klasStatHits">0</div>
-          <div class="lbl">Teridentifikasi SKDR</div>
-        </div>
-        <div class="stat-card">
-          <div class="num" id="klasStatCats">0</div>
-          <div class="lbl">Kategori Aktif</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:16px;margin-bottom:14px">Sinyal Kategori SKDR</h2>
-        <div id="klasSignalList"></div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:16px;margin-bottom:14px">Rekap per Pustu / Cabang</h2>
-        <div class="table-wrap">
-          <table><thead><tr><th>Pustu / Cabang</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
-          <tbody id="klasPustuBody"></tbody></table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:16px;margin-bottom:14px">Rekap per Poli</h2>
-        <div class="table-wrap">
-          <table><thead><tr><th>Poli</th><th style="text-align:center">Jumlah Kasus</th></tr></thead>
-          <tbody id="klasPoliBody"></tbody></table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:16px;margin-bottom:14px">Sebaran Kategori SKDR per Desa</h2>
-        <div class="table-wrap">
-          <table id="klasSkdrDesaTable">
-            <thead id="klasSkdrDesaHead"></thead>
-            <tbody id="klasSkdrDesaBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:16px;margin-bottom:14px">Data Kunjungan Terklasifikasi</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>No</th><th>Nama Pasien</th><th>No. RM</th>
-                <th>Umur/JK</th><th>Desa</th><th>Pustu</th><th>Poli</th><th>Kode ICD-10</th>
-                <th>Kategori SKDR</th><th>Dokter</th>
-              </tr>
-            </thead>
-            <tbody id="klasTableBody"></tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">
-          <button class="btn" id="klasDownloadBtn">📥 Unduh Hasil (.xlsx)</button>
-          <button class="btn secondary" id="klasResetBtn">🔄 Proses File Lain</button>
-        </div>
-      </div>
-    </div>
-  </section>
 
 </main>
 
@@ -803,6 +803,7 @@
     <span class="app-footer-sep">·</span>
     <a href="tel:+6282135887509">082135887509</a>
     <span class="app-footer-sep">·</span>
+    <span>Puskesmas Sale, Kec. Sale, Kab. Rembang</span>
   </div>
 </footer>
 
@@ -829,7 +830,7 @@ const UNIT_PELAPOR_LIST = [
   "BPM Emy Widyaastuti", "BPM Endang", "BPM Sulistyaningrum", "BPM Kartini",
   "BPM Rina Wariyanti", "PKD Bancang", "BPM Lailatul Lutfia", "BPM Anita Dwi",
   "BPM Sri Damayanti", "BPM Nurmini", "BPM Siti Patonah", "PKD Joho",
-  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "DPM dr. Lutfia",
+  "BPM Lilis S", "DPM dr. Erra Irhamni", "DPM dr. Anton", "drg. Lutfia",
   "Laporan RS/Masyarakat"
 ];
 
@@ -1979,9 +1980,6 @@ function showTab(tab) {
     if (typeof skdrBuildTable === "function") skdrBuildTable();
     if (typeof skdrBuildFasSelect === "function") skdrBuildFasSelect();
   }
-  if (tab === "klasifikasi-skdr") {
-    // panel siap — tidak perlu inisialisasi khusus
-  }
 }
 
 /* ---------------------------- FORM: PILIHAN DASAR ---------------------------- */
@@ -2547,23 +2545,24 @@ const KLAS_CATEGORIES = [
   ["E","Diare Berdarah","",["A03","A06"],null],
   ["F","Suspek Demam Tifoid","",["A01"],null],
   ["G","Sindrom Jaundis Akut","",["R17","A95","B15","B17"],null],
-  ["H","Suspek Chikungunya","",["A92"],null],
-  ["J","Suspek Flu Burung pada Manusia","",["J09"],null],
+  ["H","Suspek Chikungunya","",["A92.0"],null],
+  ["J","Suspek Flu Burung pada Manusia","Tanyakan riwayat kontak dengan unggas sakit/mati mendadak atau produk unggas dalam 7 hari terakhir",["J09"],null],
   ["K","Suspek Campak","",["A02.9","A27","A32","A38","A39","A51.3","A51.4","A69.2","A75.2","A77","A90","B00","B05","B06","B08.2","B16","B27.9","B34.0","B34.3","B38","J15.7","M30.3","R50.2"],null],
   ["L","Kasus Observasi Difteri","",["A36"],null],
   ["M","Suspek Pertussis","",["A37"],null],
-  ["N","AFP (Lumpuh Layuh Mendadak)","Hanya usia < 15 tahun",["A80","G54","G56","G57","G61","G62","G63","G70","G71","G72","G73","G81","G82","G83"],15],
-  ["P","Kasus GHPR","",["A82","W54","W55","Z20"],null],
+  ["N","AFP (Acute Flaccid Paralysis / Lumpuh Layu Mendadak)","Hanya dilaporkan untuk kasus pada anak usia di bawah 15 tahun",["A80","G54","G56","G57","G61.0","G61.8","G62","G63.0","G70.0","G70.1","G71.0","G72.3","G73.4","G73.5","G73.6","G73.7","G81.0","G82.0","G82.3","G83.0","G83.1","G83.2"],15],
+  ["P","Kasus GHPR (Gigitan Hewan Penular Rabies)","",["A82","W54","W55","Z20.3"],null],
   ["Q","Suspek Antraks","",["A22"],null],
   ["R","Suspek Leptospirosis","",["A27"],null],
   ["S","Suspek Kolera","",["A00"],null],
-  ["U","Suspek Meningitis/Ensefalitis","",["A83","A84","A85","A86","A87","A88","A89","G00","G01","G02","G03","G04","G05","G06","G07"],null],
+  ["U","Suspek Meningitis/Ensefalitis","",["A20.3","A83","A84","A85","A86","A87","A88","A89","G00","G01","G02","G03","G04","G05","G06","G07"],null],
+  ["U2","Japanese Encephalitis","",["A83"],null],
   ["V","Suspek Tetanus Neonatorum","",["A33"],null],
   ["W","Suspek Tetanus","",["A35"],null],
   ["Y","ILI (Influenza Like Illness)","",["J09","J10","J11"],null],
-  ["Z","Suspek HFMD","",["B08"],null],
+  ["Z","Suspek HFMD (Hand, Foot, and Mouth Disease)","",["B08.4"],null],
   ["AA","ISPA","",["J00","J01","J02","J03","J04","J05","J06","J20","J21","J22"],null],
-  ["AC","COVID-19 Konfirmasi","",["U07"],null],
+  ["AC","COVID-19 Konfirmasi","",["U07.1"],null],
 ];
 
 function klasBuildCategoryLookup(){
@@ -2821,7 +2820,249 @@ function klasDownload(){
   XLSX.writeFile(wb,`${klasFileName}_Klasifikasi_SKDR.xlsx`);
 }
 
-// ---- 9. INIT ----
+// ---- 9. KIRIM KE INPUT LAPORAN ----
+function klasKirimKeLaporan(){
+  if(!klasData.length){ toast('Belum ada data hasil klasifikasi.', true); return; }
+
+  // Hanya baris yang terdeteksi kategori SKDR
+  const skdrRows = klasData.filter(r => r.kategori !== "Belum Termasuk Kategori SKDR");
+  if(!skdrRows.length){
+    toast('Tidak ada kasus yang termasuk kategori SKDR untuk dikirim.', true);
+    return;
+  }
+
+  // Konfirmasi
+  if(!confirm(`Kirim ${skdrRows.length} kasus SKDR ke daftar Input Laporan?\n\nData akan langsung tersimpan di lokal dan siap disinkronkan ke Google Sheets.\nSetiap kasus akan muncul di menu Rekap Data.`)) return;
+
+  let berhasil = 0;
+  let idCounter = 0;
+  for(const r of skdrRows){
+    idCounter++;
+    // Cocokkan nama kategori SKDR → kode penyakit di PENYAKIT_LIST
+    // Ambil kategori pertama jika lebih dari satu
+    const kategoriPertama = r.kategori.split(";")[0].trim();
+    const penyakit = (typeof state !== 'undefined' && state.penyakit)
+      ? state.penyakit.find(p => p.nama.toLowerCase().includes(kategoriPertama.toLowerCase()) || kategoriPertama.toLowerCase().includes(p.nama.toLowerCase()))
+      : null;
+    const kodePenyakit = penyakit ? penyakit.kode : kategoriPertama.slice(0,2).toUpperCase();
+    const namaPenyakit = penyakit ? penyakit.nama : kategoriPertama;
+
+    // Format tanggal
+    let tgl = r.tanggal || "";
+    // konversi "dd/mm/yyyy" atau "dd-mm-yyyy" → "yyyy-mm-dd"
+    const dm = tgl.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if(dm) tgl = `${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
+
+    // Umur: konversi ke string, satuan Tahun
+    const umurVal = (r.umur !== null && r.umur !== undefined) ? String(r.umur) : "";
+
+    // Desa: gunakan nilai dari klasifikasi
+    const desaVal = r.desa && r.desa !== "Tidak Diketahui" ? r.desa : "";
+
+    const row = {
+      id: "klas-" + Date.now() + "-" + idCounter + "-" + Math.random().toString(36).slice(2,7),
+      _synced: false,
+      tanggal_lapor: tgl || new Date().toISOString().slice(0,10),
+      unit_pelapor: r.pustu || (state.settings && state.settings.unitDefault) || "",
+      desa: desaVal,
+      nama_pasien: r.nama || "",
+      umur: umurVal,
+      umur_satuan: "Tahun",
+      jenis_kelamin: r.jk || "",
+      alamat_detail: "",
+      kode_penyakit: kodePenyakit,
+      nama_penyakit: namaPenyakit,
+      gejala: "",
+      riwayat_imunisasi: "",
+      jumlah_dosis_imunisasi: "",
+      status_sampel: "",
+      jenis_sampel: "",
+      tanggal_sampel: "",
+      keterangan_sampel: "",
+      status_kasus: "Konfirmasi",
+      keterangan: `ICD-10: ${r.kodeIcd} | Dari klasifikasi register harian`,
+      waktu_input: new Date().toISOString()
+    };
+
+    if(typeof state !== 'undefined'){
+      state.kasus.unshift(row);
+      berhasil++;
+    }
+  }
+
+  if(berhasil > 0 && typeof saveArr === 'function'){
+    // Simpan semua ke localStorage dulu agar tidak hilang
+    saveArr(LS_KEYS.kasus, state.kasus);
+    if(typeof renderRekap === 'function') renderRekap();
+
+    // Sinkronkan satu per satu secara berurutan (sequential) — sama dengan syncAllPending
+    const infoEl = document.getElementById('klasKirimInfo');
+    const rowsToSync = state.kasus.filter(r => r.id.startsWith('klas-') && !r._synced);
+    let synced = 0;
+    (async () => {
+      for(const row of rowsToSync){
+        const result = await syncOneRow("kasus", row);
+        if(result.ok){
+          row._synced = true;
+          synced++;
+          saveArr(LS_KEYS.kasus, state.kasus);
+          if(infoEl) infoEl.innerHTML = `⏳ Menyinkronkan ke Google Sheets… <strong>${synced}/${rowsToSync.length}</strong>`;
+        }
+      }
+      saveArr(LS_KEYS.kasus, state.kasus);
+      if(typeof renderRekap === 'function') renderRekap();
+      if(infoEl) infoEl.innerHTML = `✅ <strong>${berhasil} kasus SKDR</strong> tersimpan. <strong>${synced}</strong> berhasil disinkronkan ke Google Sheets. Cek di menu <strong>Rekap Data</strong>.`;
+    })();
+  }
+
+  // Tampilkan info hasil
+  const infoEl = document.getElementById('klasKirimInfo');
+  infoEl.style.display = '';
+  infoEl.innerHTML = `✅ <strong>${berhasil} kasus SKDR</strong> berhasil dikirim ke Input Laporan dan sedang disinkronkan ke Google Sheets. Cek di menu <strong>Rekap Data</strong>.`;
+
+  toast(`${berhasil} kasus dikirim ke Input Laporan.`);
+}
+
+// ---- 10. KIRIM KE SKDR MINGGUAN W2 ----
+function klasTanggalKeEpiWeek(tglStr){
+  // konversi "dd/mm/yyyy" atau "dd-mm-yyyy" → Date
+  let d;
+  const dm = tglStr && tglStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(dm) d = new Date(parseInt(dm[3]), parseInt(dm[2])-1, parseInt(dm[1]));
+  else if(tglStr) d = new Date(tglStr);
+  if(!d || isNaN(d)) return null;
+  const year = d.getFullYear();
+  if(typeof skdrGetEpiWeeks !== 'function') return null;
+  const weeks = skdrGetEpiWeeks(year);
+  for(const w of weeks){
+    if(d >= w.start && d <= w.end) return { tahun: year, minggu: w.week };
+  }
+  // coba tahun sebelumnya (minggu 1 bisa lintas tahun)
+  const weeksPrev = skdrGetEpiWeeks(year - 1);
+  for(const w of weeksPrev){
+    if(d >= w.start && d <= w.end) return { tahun: year - 1, minggu: w.week };
+  }
+  return { tahun: year, minggu: 1 };
+}
+
+function klasKirimKeW2(){
+  if(!klasData.length){ toast('Belum ada data hasil klasifikasi.', true); return; }
+  const skdrRows = klasData.filter(r => r.kategori !== "Belum Termasuk Kategori SKDR");
+  if(!skdrRows.length){
+    toast('Tidak ada kasus SKDR untuk dikirim ke W2.', true); return;
+  }
+
+  // Kelompokkan per unit pelapor (pustu) × minggu epi
+  // key: "pustu||tahun||minggu"
+  const groups = {};
+  for(const r of skdrRows){
+    const epi = klasTanggalKeEpiWeek(r.tanggal);
+    if(!epi) continue;
+    const gKey = `${r.pustu}||${epi.tahun}||${epi.minggu}`;
+    if(!groups[gKey]) groups[gKey] = { fasy: r.pustu, tahun: epi.tahun, minggu: epi.minggu, rows: [] };
+    groups[gKey].rows.push(r);
+  }
+
+  const groupList = Object.values(groups);
+  if(!groupList.length){
+    toast('Tidak dapat menentukan minggu epidemiologi dari tanggal di data.', true); return;
+  }
+
+  // Ringkasan untuk konfirmasi
+  const ringkasan = groupList.map(g =>
+    `• ${g.fasy} — Minggu ${g.minggu}/${g.tahun} (${g.rows.length} kasus)`
+  ).join('\n');
+
+  if(!confirm(`Kirim rekap SKDR ke W2 untuk ${groupList.length} unit pelapor?\n\n${ringkasan}\n\nData yang sudah ada di W2 untuk unit & minggu yang sama akan DIGABUNG (ditambahkan).`)) return;
+
+  const infoEl = document.getElementById('klasKirimInfo');
+  infoEl.style.display = '';
+  infoEl.innerHTML = '⏳ Memproses rekap W2...';
+
+  let berhasil = 0;
+  for(const g of groupList){
+    const key = `${g.tahun}_W${String(g.minggu).padStart(2,'0')}_${g.fasy}`;
+
+    // Hitung jumlah kasus per kode SKDR
+    const dataBaru = {};
+    SKDR_PENYAKIT.forEach(p => { dataBaru[p.k] = { kasus:0, mati:0 }; });
+    for(const r of g.rows){
+      // Satu pasien bisa punya beberapa kategori (dipisah ";")
+      const kats = r.kategori.split(";").map(s=>s.trim());
+      for(const kat of kats){
+        const p = SKDR_PENYAKIT.find(p => p.n.toLowerCase() === kat.toLowerCase() ||
+          kat.toLowerCase().includes(p.n.toLowerCase()) ||
+          p.n.toLowerCase().includes(kat.toLowerCase()));
+        if(p && dataBaru[p.k] !== undefined) dataBaru[p.k].kasus++;
+      }
+    }
+
+    // Hitung total kunjungan unit ini
+    const totalKunjungan = klasData.filter(r => r.pustu === g.fasy).length;
+
+    // Jika sudah ada data W2 untuk key ini, gabungkan (tambahkan)
+    const existing = (typeof skdrDb !== 'undefined' && skdrDb[key]) ? skdrDb[key] : null;
+    const dataMerged = {};
+    SKDR_PENYAKIT.forEach(p => {
+      const lama = existing ? (existing.data[p.k] || {kasus:0, mati:0}) : {kasus:0, mati:0};
+      dataMerged[p.k] = { kasus: lama.kasus + dataBaru[p.k].kasus, mati: lama.mati };
+    });
+
+    const record = {
+      fasy:      g.fasy,
+      tahun:     String(g.tahun),
+      minggu:    String(g.minggu),
+      kunjungan: String(totalKunjungan),
+      key,
+      nihil:     false,
+      data:      dataMerged,
+      waktu:     new Date().toISOString(),
+      synced:    false,
+      sumber:    'klasifikasi'
+    };
+
+    if(typeof skdrDb !== 'undefined'){
+      skdrDb[key] = record;
+      berhasil++;
+    }
+  }
+
+  // Simpan ke localStorage
+  if(typeof skdrSave === 'function') skdrSave();
+
+  // Render ulang tabel W2 jika sedang aktif
+  if(typeof skdrBuildTable === 'function') skdrBuildTable();
+
+  // Sinkronkan ke Google Sheets satu per satu (sequential)
+  const keysToSync = groupList.map(g =>
+    `${g.tahun}_W${String(g.minggu).padStart(2,'0')}_${g.fasy}`
+  );
+  let synced = 0;
+  (async () => {
+    for(const key of keysToSync){
+      const record = skdrDb[key];
+      if(!record) continue;
+      if(infoEl) infoEl.innerHTML = `⏳ Menyinkronkan ke Google Sheets… <strong>${synced}/${keysToSync.length}</strong>`;
+      const result = await skdrSyncToSheets(record);
+      if(result.ok){
+        record.synced = true;
+        if(typeof skdrDb !== 'undefined') skdrDb[key] = record;
+        synced++;
+        if(typeof skdrSave === 'function') skdrSave();
+      } else {
+        // Gagal → masuk pending
+        if(typeof skdrPending !== 'undefined') skdrPending.push(record);
+        if(typeof skdrSave === 'function') skdrSave();
+        if(typeof skdrUpdateSyncBadge === 'function') skdrUpdateSyncBadge();
+      }
+    }
+    if(typeof skdrBuildTable === 'function') skdrBuildTable();
+    infoEl.innerHTML = `✅ <strong>${berhasil} unit pelapor</strong> berhasil dikirim ke SKDR Mingguan W2. <strong>${synced}</strong> tersinkron ke Google Sheets. Cek di menu <strong>SKDR Mingguan</strong>.`;
+    toast(`Rekap W2 untuk ${berhasil} unit dikirim.`);
+  })();
+}
+
+// ---- 11. INIT ----
 function klasInit(){
   const dz = document.getElementById('klasDropzone');
   const fi = document.getElementById('klasFileInput');
@@ -2835,11 +3076,13 @@ function klasInit(){
   });
   fi.addEventListener('change',e=>{if(e.target.files.length) klasHandleFile(e.target.files[0]);});
   document.getElementById('klasDownloadBtn').addEventListener('click',klasDownload);
+  document.getElementById('klasKirimLaporanBtn').addEventListener('click',klasKirimKeLaporan);
   document.getElementById('klasResetBtn').addEventListener('click',()=>{
     document.getElementById('klasResults').style.display='none';
     document.getElementById('klasFileChip').innerHTML='';
     document.getElementById('klasStatus').textContent='';
     document.getElementById('klasStatus').classList.remove('err');
+    document.getElementById('klasKirimInfo').style.display='none';
     fi.value='';
     klasData=[];
   });
